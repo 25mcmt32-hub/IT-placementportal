@@ -1,0 +1,30 @@
+import mongoose from "mongoose";
+
+const coordinatorAuthSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+    collection: "student_coordinators",
+  }
+);
+
+export default mongoose.model("CoordinatorAuth", coordinatorAuthSchema);

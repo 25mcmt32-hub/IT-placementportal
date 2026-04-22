@@ -1,0 +1,57 @@
+Test #,Date,Field,Action,Input,Expected Results,Actual Results,Pass?
+1,21-Apr,Student Registration,POST /api/students/register (form),All required fields + resume,"201 Created - Registration successful.","201 Created - Registration successful.",Pass
+2,21-Apr,Student Registration,POST /api/students/register (form),Missing password,"400 Bad Request - Please fill all required fields.","400 Bad Request - Please fill all required fields.",Fail
+3,21-Apr,Student Registration,POST /api/students/register (form),Duplicate email/regno,"409 Conflict - A student with this email or registration number already exists.","409 Conflict - A student with this email or registration number already exists.",Fail
+4,21-Apr,Student Login,POST /api/auth/student/login,Correct credentials,"200 OK - Login successful.","200 OK - Login successful.",Pass
+5,21-Apr,Student Login,POST /api/auth/student/login,Incorrect password,"401 Unauthorized - Invalid login credentials.","401 Unauthorized - Invalid login credentials.",Fail
+6,21-Apr,Create Placement Drive,POST /api/drives (form),All required fields + JD,"201 Created - Placement drive created successfully.","201 Created - Placement drive created successfully.",Pass
+7,21-Apr,Create Placement Drive,POST /api/drives (form),Missing company/minCgpa,"400 Bad Request - Company, minimum CGPA, deadline, and degree are required.","400 Bad Request - Company, minimum CGPA, deadline, and degree are required.",Fail
+8,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Eligible studentId,"200 OK - Applied successfully.","200 OK - Applied successfully.",Pass
+9,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Insufficient CGPA,"400 Bad Request - You do not meet the minimum CGPA criteria for this drive.","400 Bad Request - You do not meet the minimum CGPA criteria for this drive.",Fail
+10,21-Apr,Export Applicants,GET /api/drives/{id}/applications/export,Coordinator request,"200 OK - attachment .xlsx","200 OK - attachment .xlsx",Pass
+11,21-Apr,Create Material,POST /api/materials (form),Missing title,"400 Bad Request - Material title is required.","400 Bad Request - Material title is required.",Fail
+12,21-Apr,Student Registration,POST /api/students/register (form),Invalid email format,"400 Bad Request - Invalid email format","",TBD
+13,21-Apr,Student Registration,POST /api/students/register (form),Weak password (too short),"400 Bad Request - Password does not meet strength requirements","",TBD
+14,21-Apr,Student Registration,Client-side form,Confirm-password mismatch,"Client blocked submit; show 'Passwords do not match'","",TBD
+15,21-Apr,Student Profile,PATCH /api/students/{id},Update to existing email,"409 Conflict - Email already in use","",TBD
+16,21-Apr,Student Registration,POST /api/students/register (form),Invalid regno format,"400 Bad Request - Invalid registration number","",TBD
+17,21-Apr,Authentication,POST /api/auth/student/login,Multiple failed logins (policy),"429 Too Many Requests or 403 - Account temporarily locked","",TBD
+18,21-Apr,Authentication,POST /api/auth/student/login,Login with blacklisted account,"403 Forbidden - Account is blacklisted","",TBD
+19,21-Apr,Auth Token,UI behavior,Token persistence across reloads,"Token stored and persists; user remains logged-in","",TBD
+20,21-Apr,Password Reset,POST /api/auth/reset/request,Unknown email,"200 OK (generic) - If email exists, reset link sent","",TBD
+21,21-Apr,Password Reset,POST /api/auth/reset,Expired token,"400 Bad Request - Reset token expired or invalid","",TBD
+22,21-Apr,Password Reset,POST /api/auth/reset,Reuse token after reset,"400 Bad Request - Token invalid","",TBD
+23,21-Apr,Drive Management,POST /api/drives (form),Invalid degree enum value,"400 Bad Request - degree must be one of [All Degrees, IMTech, MTech, ...]","",TBD
+24,21-Apr,Drive Management,POST /api/drives (form),minCgpa non-numeric or out-of-range,"400 Bad Request - minCgpa must be numeric between 0 and 10","",TBD
+25,21-Apr,Drive Management,POST /api/drives (form),Deadline in the past,"400 Bad Request - deadline must be a future date","",TBD
+26,21-Apr,Drive Management,PATCH /api/drives/{id},Missing JD when required,"400 Bad Request - JD file required","",TBD
+27,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Student placed true,"403 Forbidden - Placed students cannot apply","",TBD
+28,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Student blacklisted true,"403 Forbidden - Blacklisted students cannot apply","",TBD
+29,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Duplicate application concurrency test,"409 Conflict - Already applied","",TBD
+30,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Edge CGPA equals minCgpa,"200 OK - Application accepted (inclusive check)","",TBD
+31,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Degree mismatch,"400 Bad Request - Degree not eligible for this drive","",TBD
+32,21-Apr,Apply For Drive,POST /api/drives/{id}/apply,Missing/malformed studentId,"400 Bad Request or 404 Not Found - Invalid student ID","",TBD
+33,21-Apr,Material Hub,POST /api/materials (form),Unsupported file type,"400 Bad Request - File type not allowed","",TBD
+34,21-Apr,File Upload,POST /api/upload,resume too large,"413 Payload Too Large - file exceeds size limit","",TBD
+35,21-Apr,File Download,GET /uploads/resumes/{file},Download resume,"200 OK - correct Content-Type and bytes","",TBD
+36,21-Apr,Material Hub,DELETE /api/materials/{id},Unauthorized delete by non-owner,"403 Forbidden - not authorized to delete","",TBD
+37,21-Apr,Export Applicants,GET /api/drives/{id}/applications/export,No applicants,"200 OK - XLSX with headers only","",TBD
+38,21-Apr,Export Applicants,GET /api/drives/{id}/applications/export,Large applicant set,"200 OK - XLSX containing all applicants","",TBD
+39,21-Apr,Export Applicants,GET /api/drives/{id}/applications/export,Special characters in names,"200 OK - XLSX preserves UTF-8 characters","",TBD
+40,21-Apr,Security,POST /api/auth/student/login,NoSQL injection attempt in email,"401 Unauthorized - credentials invalid; input not interpreted as query","",TBD
+41,21-Apr,Security,POST /api/students/register,Stored XSS attempt in name,"Stored safely or escaped when rendered; no script execution","",TBD
+42,21-Apr,Security,GET /api/students/{id},Ensure password not returned,"200 OK - user object without password field","",TBD
+43,21-Apr,API Errors,GET /api/protected,Missing Authorization header,"401 Unauthorized - Authorization required","",TBD
+44,21-Apr,API Errors,GET /api/resource/{id},Invalid ObjectId format,"400 Bad Request - Invalid id format","",TBD
+45,21-Apr,API Errors,POST /api/some,Rate limit abused,"429 Too Many Requests - rate-limited","",TBD
+46,21-Apr,Concurrency,POST /api/drives/{id}/apply,Simultaneous seat-limited apply,"Only one application accepted when seats limited","",TBD
+47,21-Apr,Concurrency,PATCH /api/students/{id},Concurrent profile updates consistency,"Consistent final state or conflict handled","",TBD
+48,21-Apr,Frontend UX,Client form,Validation messages displayed inline,"Inline validation messages shown for fields","",TBD
+49,21-Apr,Frontend UX,Client form,Submit button disabled while pending,"Submit disabled during request","",TBD
+50,21-Apr,Frontend UX,Drive UI,Apply disabled for placed/blacklisted,"Apply button disabled","",TBD
+51,21-Apr,Frontend UX,Resume upload,Resume preview shows filename and size,"Preview displays filename and size","",TBD
+52,21-Apr,Frontend UX,Accessibility,Forms keyboard navigable and labeled,"Accessible forms with labels and tab order","",TBD
+53,21-Apr,Edge Case,File Upload,Filename collision saved uniquely,"File stored with unique name; no overwrite","",TBD
+54,21-Apr,Edge Case,File Upload,Path traversal in filename,"Filename sanitized; no path traversal","",TBD
+55,21-Apr,Edge Case,API,DB down returns friendly error,"500 Internal Server Error - please try later","",TBD
+56,21-Apr,Edge Case,Deadline,Timezone handling for deadlines,"Deadline comparisons work across timezones","",TBD
