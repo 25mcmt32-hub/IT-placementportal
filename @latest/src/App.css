@@ -1,516 +1,715 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
+:root {
+  --brand: #8f1219;
+  --brand-dark: #5f0d12;
+  --brand-soft: #fff1f2;
+  --ink: #1f2937;
+  --muted: #667085;
+  --line: rgba(143, 18, 25, 0.12);
+  --line-strong: rgba(143, 18, 25, 0.24);
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: #ffffff;
+  --surface-soft: #fff8f6;
+  --success-bg: #ecfdf3;
+  --success-text: #166534;
+  --success-border: #9fe0b3;
+  --error-bg: #fff1f2;
+  --error-text: #9f1239;
+  --error-border: #f5a6bb;
+  --shadow-lg: 0 24px 70px rgba(91, 17, 22, 0.14);
+  --shadow-md: 0 18px 42px rgba(91, 17, 22, 0.1);
+  --shadow-sm: 0 10px 24px rgba(91, 17, 22, 0.08);
+  --radius-xl: 32px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
 }
 
-/* 🔴 NAVBAR */
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
 .navbar {
-  background-color: #b30000;
-  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 40;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 15px 40px;
+  gap: 24px;
+  padding: 20px 32px;
+  background:
+    linear-gradient(135deg, rgba(95, 13, 18, 0.96), rgba(143, 18, 25, 0.92)),
+    #7f1016;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 32px rgba(58, 10, 13, 0.18);
+}
+
+.navbar h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 1.25rem;
+  letter-spacing: 0.03em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .nav-links a {
-  color: white;
-  margin-left: 20px;
   text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-/* 🔴 HERO SECTION */
+.nav-links a:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.38);
+  transform: translateY(-1px);
+}
+
 .hero {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 360px);
   align-items: center;
-  padding: 80px 100px;
-  background-color: #f5f5f5;
+  gap: 32px;
+  padding: 72px 40px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(246, 205, 174, 0.9), transparent 32%),
+    radial-gradient(circle at 85% 20%, rgba(143, 18, 25, 0.14), transparent 24%),
+    linear-gradient(180deg, #fff7f4 0%, #fffdfb 100%);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 22px;
+  border-radius: 36px;
+  border: 1px solid rgba(143, 18, 25, 0.09);
+  pointer-events: none;
+}
+
+.hero-left,
+.hero-right {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-left {
-  max-width: 600px;
+  text-align: left;
+  max-width: 760px;
 }
 
 .hero-left h1 {
-  color: #b30000;
-  font-size: 48px;
-  line-height: 1.2;
-  margin-bottom: 20px;
+  margin: 0 0 18px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.5rem, 6vw, 4.7rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  color: #2a1112;
 }
 
 .hero-left p {
-  font-size: 18px;
-  color: #555;
+  max-width: 560px;
+  font-size: 1.08rem;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.hero-right {
+  padding: 26px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(143, 18, 25, 0.12);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px);
+}
+
+.hero-right button,
+.buttons button,
+.login button,
+.form button,
+.drive-card button,
+.forgot-password-card button,
+.logout-button,
+.register-card button {
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .hero-right button {
   display: block;
-  margin: 15px 0;
-  padding: 12px 30px;
-  background-color: #b30000;
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  width: 220px;
+  width: 100%;
+  margin: 0;
+  padding: 15px 18px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 14px 26px rgba(143, 18, 25, 0.18);
 }
 
-.hero-right button:hover {
-  background-color: #800000;
+.hero-right button + button {
+  margin-top: 14px;
 }
 
-/* 🔴 SECTIONS */
+.hero-right button:hover,
+.login button:hover,
+.form button:hover,
+.drive-card button:hover,
+.register-card button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 26px rgba(143, 18, 25, 0.18);
+}
+
 .section {
-  padding: 60px;
+  padding: 72px 40px;
   text-align: center;
 }
 
 .gray {
-  background-color: #f2f2f2;
+  background:
+    linear-gradient(180deg, rgba(255, 245, 243, 0.9), rgba(255, 255, 255, 0.96)),
+    #fff8f6;
+}
+
+.section h2,
+.content h2,
+.register-card h2,
+.login h2,
+.forgot-password-card h3 {
+  margin: 0 0 16px;
+  color: #301214;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  letter-spacing: -0.03em;
 }
 
 .section h2 {
-  margin-bottom: 20px;
-  font-size: 28px;
+  margin-bottom: 14px;
 }
 
-/* 🔴 BUTTONS */
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+
 .buttons button {
-  margin: 10px;
-  padding: 10px 25px;
-  border: 1px solid #b30000;
-  background: white;
-  cursor: pointer;
+  padding: 12px 22px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--brand);
+  box-shadow: var(--shadow-sm);
 }
 
 .buttons button:hover {
-  background-color: #b30000;
-  color: white;
+  transform: translateY(-2px);
+  background: var(--brand);
+  color: #fff;
 }
 
-/* 🔴 CARDS */
 .cards {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 22px;
+  margin-top: 30px;
 }
 
 .card {
   padding: 20px;
-  border: 1px solid #ccc;
-  width: 160px;
-  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #ffffff 0%, #fff7f5 100%);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.24s ease, box-shadow 0.24s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-md);
 }
 
 .card img {
   width: 100%;
-  height: 150px;
+  aspect-ratio: 1 / 1.1;
+  border-radius: 18px;
   object-fit: cover;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .card p {
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #322022;
 }
 
-/* 🔴 FOOTER */
 .footer {
-  background-color: #b30000;
-  color: white;
-  text-align: center;
-  padding: 15px;
+  margin-top: auto;
+  padding: 22px 24px 30px;
+  color: #fff8f7;
+  background:
+    linear-gradient(135deg, rgba(95, 13, 18, 0.98), rgba(143, 18, 25, 0.96)),
+    #7f1016;
+}
+
+.footer p {
+  opacity: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.login,
+.register-container {
+  min-height: calc(100vh - 92px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px 56px;
+  background:
+    radial-gradient(circle at top left, rgba(246, 205, 174, 0.6), transparent 28%),
+    linear-gradient(180deg, #fff9f7 0%, #fff 100%);
 }
 
 .login {
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-top: 100px;
+  gap: 12px;
 }
 
-.login input {
-  margin: 10px;
-  padding: 10px;
-  width: 250px;
-}
-
-.login button {
-  padding: 10px 20px;
-  background-color: #b30000;
-  color: white;
-  border: none;
+.login form,
+.register-card,
+.forgot-password-card,
+.content > div {
+  background: var(--surface);
+  border: 1px solid rgba(143, 18, 25, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .login form {
+  width: min(420px, calc(100vw - 40px));
+  padding: 28px;
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 14px;
+  backdrop-filter: blur(18px);
 }
 
-.login input {
-  margin: 10px;
-  padding: 10px;
-  width: 250px;
+.login > p {
+  margin: 0;
+  color: var(--muted);
 }
 
-.login button {
-  margin-top: 10px;
-  padding: 10px 20px;
-  background-color: #b30000;
-  color: white;
-  border: none;
-  cursor: pointer;
+.login input,
+.register-card input,
+.register-card select,
+.forgot-password-card input,
+.form input,
+.form select,
+.content input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.login input:focus,
+.register-card input:focus,
+.register-card select:focus,
+.forgot-password-card input:focus,
+.form input:focus,
+.form select:focus,
+.content input[type="text"]:focus {
+  border-color: rgba(143, 18, 25, 0.45);
+  box-shadow: 0 0 0 4px rgba(143, 18, 25, 0.08);
+  background: #fff;
+}
+
+.login button,
+.form button,
+.register-card button,
+.forgot-password-card form button,
+.drive-card button {
+  padding: 12px 18px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff;
+  font-weight: 600;
 }
 
 .login span {
-  color: #b30000;
-  font-weight: bold;
+  color: #1d4ed8;
+  font-weight: 700;
 }
 
 .form-message {
-  width: 250px;
-  margin: 8px 0;
-  padding: 10px 12px;
-  border-radius: 4px;
-  font-size: 14px;
+  width: min(420px, 100%);
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.94rem;
   text-align: left;
   box-sizing: border-box;
 }
 
 .error-message {
-  color: #8a1111;
-  background-color: #fde8e8;
-  border: 1px solid #efb4b4;
+  color: var(--error-text);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
 }
 
 .success-message {
-  color: #14532d;
-  background-color: #dcfce7;
-  border: 1px solid #86efac;
-}
-
-/* REGISTER PAGE */
-
-.register-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f5f5f5;
-  padding: 50px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
 }
 
 .register-card {
-  background: white;
+  width: min(520px, calc(100vw - 40px));
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
   padding: 30px;
-  width: 350px;
-  max-height: 90vh;
-  overflow-y: auto;   /* 🔥 SCROLL */
-  border: 1px solid #ccc;
-}
-
-.register-card h2 {
-  text-align: center;
-  color: #b30000;
-  margin-bottom: 20px;
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(18px);
 }
 
 .register-card h3 {
-  margin-top: 20px;
-  color: #b30000;
+  margin: 26px 0 10px;
+  color: var(--brand);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.register-card input,
-.register-card select {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-}
-
-.register-card button {
-  width: 100%;
-  padding: 10px;
-  background-color: #b30000;
-  color: white;
-  border: none;
+.register-card label {
+  display: block;
   margin-top: 10px;
-  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.94rem;
+  text-align: left;
 }
 
 .register-card button:disabled,
-.login button:disabled {
-  opacity: 0.7;
+.login button:disabled,
+.forgot-password-card button:disabled {
+  opacity: 0.72;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-/* DASHBOARD */
-
-/* DASHBOARD BACKGROUND */
 .dashboard {
-  display: flex;
-  height: 100vh;
-  background-color: #f5f5f5; /* light background */
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  min-height: calc(100vh - 88px);
+  background:
+    radial-gradient(circle at top left, rgba(246, 205, 174, 0.45), transparent 25%),
+    linear-gradient(180deg, #fff8f6 0%, #fff 100%);
 }
 
-/* SIDEBAR */
 .sidebar {
-  width: 220px;
-  background-color: #b30000;
-  color: white;
-  padding: 20px;
+  padding: 28px 20px;
+  background:
+    linear-gradient(180deg, rgba(95, 13, 18, 0.98), rgba(143, 18, 25, 0.96)),
+    #7f1016;
+  color: #fff;
+  box-shadow: 10px 0 30px rgba(58, 10, 13, 0.12);
 }
 
 .sidebar h3 {
-  margin-bottom: 20px;
+  margin: 0 0 18px;
+  font-size: 1.35rem;
 }
 
 .sidebar p {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
   cursor: pointer;
-  margin: 10px 0;
-}
-
-/* CONTENT AREA */
-.content {
-  flex: 1;
-  padding: 30px;
-}
-
-/* MAIN BOX (IMPORTANT CHANGE) */
-.content > div {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-/* HEADINGS */
-.content h2 {
-  color: #b30000;
-  margin-bottom: 15px;
-}
-
-/* DRIVE CARD SMALL IMPROVE */
-.drive-card {
-  border: 1px solid #ddd;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 6px;
-}
-
-/* BUTTON */
-.drive-card button {
-  background-color: #b30000;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
-.sidebar {
-  width: 220px;
-  background-color: #b30000;
-  color: white;
-  padding: 20px;
-
-  border-right: 2px solid #ddd;   /* 🔥 main separation */
-}
-
-.navbar {
-  background-color: #b30000;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  padding: 15px 40px;
-
-  border-bottom: 2px solid #ddd;  /* 🔥 separation */
-}
-
-.sidebar {
-  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-}
-
-.navbar {
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.nav-links a {
-  color: white;
-  margin-left: 15px;
-  text-decoration: none;
-
-  padding: 6px 12px;              /* 🔥 box feel */
-  border: 1px solid white;        /* 🔥 boundary */
-  border-radius: 4px;             /* smooth corners */
-  transition: 0.3s;
-}
-
-.nav-links a:hover {
-  background-color: white;
-  color: #b30000;
-}
-
-.sidebar p {
-  cursor: pointer;
-  margin: 10px 0;
-
-  padding: 10px;                 /* 🔥 box feel */
-  border: 1px solid white;       /* 🔥 boundary */
-  border-radius: 4px;
-  transition: 0.3s;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .sidebar p:hover {
-  background-color: white;
-  color: #b30000;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  max-width: 400px;
-}
-
-.form input {
-  margin: 10px 0;
-  padding: 10px;
-}
-
-.form button {
-  padding: 10px;
-  background-color: #b30000;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-.action-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.applicant-list {
-  margin-top: 10px;
-  padding: 10px;
-  background: #f8f8f8;
-  border-radius: 6px;
-}
-
-.student-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.student-table th,
-.student-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
-  text-align: center;
-}
-
-.student-table th {
-  background-color: #b30000;
-  color: white;
-}
-
-.student-table button {
-  padding: 5px 10px;
-  border: none;
-  background-color: #b30000;
-  color: white;
-  cursor: pointer;
+  transform: translateX(3px);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .logout-button {
   width: 100%;
   margin: 0 0 16px;
-  padding: 10px;
-  border: 1px solid white;
-  background-color: white;
-  color: #b30000;
-  cursor: pointer;
-  border-radius: 4px;
-  font-weight: bold;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--brand);
+  font-weight: 700;
 }
 
-.logout-button:hover {
-  background-color: #f8d7d7;
+.content {
+  padding: 32px;
+}
+
+.content > div {
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  backdrop-filter: blur(14px);
+}
+
+.content p {
+  color: #475467;
+}
+
+.content a,
+.drive-card a {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.content > div > p,
+.drive-card > p {
+  margin-top: 10px;
+}
+
+.drive-card {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #ffffff 0%, #fff7f5 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.drive-card h3 {
+  margin: 0 0 10px;
+  color: #301214;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.action-row span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: #6d2831;
+  border: 1px solid rgba(143, 18, 25, 0.12);
+}
+
+.applicant-list {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(255, 248, 246, 0.96);
+  border-radius: 16px;
+  border: 1px dashed rgba(143, 18, 25, 0.22);
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.student-table th,
+.student-table td {
+  padding: 14px 12px;
+  text-align: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.student-table th {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff;
+  font-weight: 700;
+}
+
+.student-table tr:nth-child(even) td {
+  background: #fffaf8;
+}
+
+.student-table tr:last-child td {
+  border-bottom: none;
+}
+
+.student-table button {
+  min-width: 110px;
 }
 
 .dashboard-empty {
-  color: #555;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.28);
 }
 
 .dashboard-message {
-  width: 100%;
-  max-width: 420px;
+  width: min(520px, 100%);
   margin-bottom: 16px;
 }
 
 .forgot-password-card {
-  width: 320px;
-  max-width: 90vw;
-  padding: 18px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 22px;
+  border-radius: 24px;
   box-sizing: border-box;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 .forgot-password-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(25, 18, 18, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   z-index: 1000;
+  backdrop-filter: blur(8px);
 }
 
 .forgot-password-link {
-  margin-top: 12px;
+  margin-top: 4px;
   border: none;
   background: transparent;
-  color: #b30000;
+  color: var(--brand);
   cursor: pointer;
   text-decoration: underline;
-  font-size: 14px;
+  font-size: 0.95rem;
 }
 
 .forgot-password-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .forgot-password-close {
-  border: 1px solid #b30000;
-  background: white;
-  color: #b30000;
-  padding: 6px 10px;
-  cursor: pointer;
-  border-radius: 4px;
+  padding: 10px 14px;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .forgot-password-card h3 {
-  margin: 0 0 8px;
-  color: #b30000;
+  margin: 0;
+  font-size: 1.45rem;
 }
 
 .forgot-password-card form {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
-.forgot-password-card input {
-  width: 100%;
-  margin: 8px 0;
-  box-sizing: border-box;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+}
+
+@media (max-width: 960px) {
+  .navbar,
+  .hero,
+  .section,
+  .content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    box-shadow: none;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-right {
+    max-width: 420px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .nav-links {
+    width: 100%;
+  }
+
+  .nav-links a {
+    flex: 1 1 120px;
+    text-align: center;
+  }
+
+  .hero {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .section,
+  .content {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .content > div,
+  .register-card,
+  .login form {
+    padding: 20px;
+  }
+
+  .student-table {
+    display: block;
+    overflow-x: auto;
+  }
 }
