@@ -19,18 +19,18 @@ function StudentRegister() {
     twelfth: "",
     ug: "",
     pg: "",
-    resume: null,
+    resumeUrl: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
+    const { name, value } = e.target;
 
     setForm((currentForm) => ({
       ...currentForm,
-      [name]: files ? files[0] : value,
+      [name]: value,
     }));
   };
 
@@ -47,26 +47,22 @@ function StudentRegister() {
     try {
       setIsSubmitting(true);
 
-      const payload = new FormData();
-      payload.append("name", form.name);
-      payload.append("email", form.email);
-      payload.append("regno", form.regno);
-      payload.append("year", form.year);
-      payload.append("branch", form.branch);
-      payload.append("degree", form.degree);
-      payload.append("password", form.password);
-      payload.append("tenth", form.tenth);
-      payload.append("twelfth", form.twelfth);
-      payload.append("ug", form.ug);
-      payload.append("pg", form.pg);
-
-      if (form.resume) {
-        payload.append("resume", form.resume);
-      }
-
       await apiRequest("/students/register", {
         method: "POST",
-        body: payload,
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          regno: form.regno,
+          year: form.year,
+          branch: form.branch,
+          degree: form.degree,
+          password: form.password,
+          tenth: form.tenth,
+          twelfth: form.twelfth,
+          ug: form.ug,
+          pg: form.pg,
+          resumeUrl: form.resumeUrl,
+        }),
       });
 
       setMessage("Registration successful. You can log in now.");
@@ -83,7 +79,7 @@ function StudentRegister() {
         twelfth: "",
         ug: "",
         pg: "",
-        resume: null,
+        resumeUrl: "",
       });
 
       setTimeout(() => {
@@ -163,9 +159,15 @@ function StudentRegister() {
         <input name="ug" placeholder="UG CGPA" value={form.ug} onChange={handleChange} />
         <input name="pg" placeholder="PG CGPA" value={form.pg} onChange={handleChange} />
 
-        {/* RESUME */}
-        <label>Upload Resume</label>
-        <input type="file" name="resume" onChange={handleChange} />
+        <label>Public Resume URL</label>
+        <input
+          type="url"
+          name="resumeUrl"
+          placeholder="https://drive.google.com/..."
+          value={form.resumeUrl}
+          onChange={handleChange}
+          required
+        />
 
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Submit"}

@@ -60,10 +60,19 @@ const driveApplicationSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    collegeName: {
+      type: String,
+      default: "University of Hyderabad",
+      trim: true,
+    },
     resumeUrl: {
       type: String,
       default: "",
       trim: true,
+    },
+    companyFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     appliedAt: {
       type: Date,
@@ -111,6 +120,37 @@ const placementDriveSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+    applicationFields: {
+      type: [
+        {
+          key: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          label: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+          source: {
+            type: String,
+            enum: ["student", "custom"],
+            default: "custom",
+            trim: true,
+          },
+          required: {
+            type: Boolean,
+            default: true,
+          },
+          order: {
+            type: Number,
+            default: 1,
+          },
+        },
+      ],
+      default: [],
     },
     createdBy: {
       type: String,

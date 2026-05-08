@@ -74,6 +74,22 @@ const studentSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "approved"],
+      default: "pending",
+      trim: true,
+    },
+    academicVerificationStatus: {
+      type: String,
+      enum: ["pending", "approved"],
+      default: "approved",
+      trim: true,
+    },
+    cgpaEditAccess: {
+      type: Boolean,
+      default: false,
+    },
     placed: {
       type: Boolean,
       default: false,

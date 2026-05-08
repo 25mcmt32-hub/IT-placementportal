@@ -1,6 +1,18 @@
 import bcrypt from "bcryptjs";
 import Student from "../models/Student.js";
-import { buildFileUrl } from "../config/uploads.js";
+
+function isPublicResumeUrl(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    const privateIpPattern =
+      /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|0\.|169\.254\.)/;
+
+    return ["http:", "https:"].includes(url.protocol) && !privateIpPattern.test(hostname);
+  } catch {
+    return false;
+  }
+}
 
 function sanitizeStudent(student) {
   return {
@@ -19,10 +31,22 @@ function sanitizeStudent(student) {
     resumeFileName: student.resumeFileName,
     resumeOriginalName: student.resumeOriginalName,
     resumeUrl: student.resumeUrl,
+    verificationStatus: student.verificationStatus || "pending",
+    academicVerificationStatus: student.academicVerificationStatus || "approved",
+    cgpaEditAccess: Boolean(student.cgpaEditAccess),
     placed: student.placed,
     blacklist: student.blacklist,
     createdAt: student.createdAt,
   };
+}
+
+function getCgpaFieldForDegree(degree) {
+  return degree === "IMTech" ? "ug" : "pg";
+}
+
+function isValidCgpa(value) {
+  const cgpa = Number.parseFloat(value);
+  return Number.isFinite(cgpa) && cgpa >= 0 && cgpa <= 10;
 }
 
 export async function registerStudent(req, res) {
@@ -39,10 +63,15 @@ export async function registerStudent(req, res) {
       twelfth,
       ug,
       pg,
+      resumeUrl,
     } = req.body;
 
-    if (!name || !email || !regno || !year || !branch || !degree || !password) {
+    if (!name || !email || !regno || !year || !branch || !degree || !password || !resumeUrl) {
       return res.status(400).json({ message: "Please fill all required fields." });
+    }
+
+    if (!isPublicResumeUrl(resumeUrl)) {
+      return res.status(400).json({ message: "Please provide a valid public resume URL." });
     }
 
     const existingStudent = await Student.findOne({
@@ -69,9 +98,9 @@ export async function registerStudent(req, res) {
       twelfth,
       ug,
       pg,
-      resumeFileName: req.file?.filename || "",
-      resumeOriginalName: req.file?.originalname || "",
-      resumeUrl: req.file ? buildFileUrl(req, "resumes", req.file.filename) : "",
+      resumeFileName: resumeUrl,
+      resumeOriginalName: resumeUrl,
+      resumeUrl,
     });
 
     return res.status(201).json({
@@ -92,52 +121,19 @@ export async function updateStudentProfile(req, res) {
       return res.status(404).json({ message: "Student not found." });
     }
 
-    const {
-      name,
-      email,
-      regno,
-      year,
-      branch,
-      degree,
-      tenth,
-      twelfth,
-      ug,
-      pg,
-      password,
-    } = req.body;
+    const { resumeUrl } = req.body;
 
-    const nextEmail = (email || student.email).toLowerCase();
-    const nextRegno = regno || student.regno;
-
-    const duplicateStudent = await Student.findOne({
-      _id: { $ne: student._id },
-      $or: [{ email: nextEmail }, { regno: nextRegno }],
-    });
-
-    if (duplicateStudent) {
-      return res.status(409).json({ message: "Email or registration number is already in use." });
+    if (!resumeUrl) {
+      return res.status(400).json({ message: "Please provide a resume URL." });
     }
 
-    student.name = name || student.name;
-    student.email = nextEmail;
-    student.regno = nextRegno;
-    student.year = year || student.year;
-    student.branch = branch || student.branch;
-    student.degree = degree || student.degree;
-    student.tenth = tenth ?? student.tenth;
-    student.twelfth = twelfth ?? student.twelfth;
-    student.ug = ug ?? student.ug;
-    student.pg = pg ?? student.pg;
-
-    if (password) {
-      student.password = await bcrypt.hash(password, 10);
+    if (!isPublicResumeUrl(resumeUrl)) {
+      return res.status(400).json({ message: "Please provide a valid public resume URL." });
     }
 
-    if (req.file) {
-      student.resumeFileName = req.file.filename;
-      student.resumeOriginalName = req.file.originalname;
-      student.resumeUrl = buildFileUrl(req, "resumes", req.file.filename);
-    }
+    student.resumeFileName = resumeUrl;
+    student.resumeOriginalName = resumeUrl;
+    student.resumeUrl = resumeUrl;
 
     await student.save();
 
@@ -148,6 +144,40 @@ export async function updateStudentProfile(req, res) {
   } catch (error) {
     console.error("Update student profile error:", error);
     return res.status(500).json({ message: "Unable to update student profile right now." });
+  }
+}
+
+export async function updateStudentCgpa(req, res) {
+  try {
+    const { cgpa } = req.body;
+    const student = await Student.findById(req.params.id);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    if (!student.cgpaEditAccess) {
+      return res.status(403).json({ message: "Faculty approval is required to edit CGPA." });
+    }
+
+    if (!isValidCgpa(cgpa)) {
+      return res.status(400).json({ message: "Please enter a valid CGPA between 0 and 10." });
+    }
+
+    const cgpaField = getCgpaFieldForDegree(student.degree);
+    student[cgpaField] = String(cgpa).trim();
+    student.cgpaEditAccess = false;
+    student.academicVerificationStatus = "pending";
+
+    await student.save();
+
+    return res.status(200).json({
+      message: "CGPA updated. Faculty verification is required before applying for drives.",
+      user: sanitizeStudent(student),
+    });
+  } catch (error) {
+    console.error("Update student CGPA error:", error);
+    return res.status(500).json({ message: "Unable to update CGPA right now." });
   }
 }
 
@@ -178,7 +208,7 @@ export async function getStudentById(req, res) {
 
 export async function updateStudentStatus(req, res) {
   try {
-    const { placed, blacklist } = req.body;
+    const { placed, blacklist, cgpaEditAccess, academicVerificationStatus } = req.body;
     const student = await Student.findById(req.params.id);
 
     if (!student) {
@@ -193,6 +223,15 @@ export async function updateStudentStatus(req, res) {
       student.blacklist = blacklist;
     }
 
+    if (typeof cgpaEditAccess === "boolean") {
+      student.cgpaEditAccess = cgpaEditAccess;
+    }
+
+    if (academicVerificationStatus === "approved") {
+      student.academicVerificationStatus = "approved";
+      student.cgpaEditAccess = false;
+    }
+
     await student.save();
 
     return res.status(200).json({
@@ -202,5 +241,42 @@ export async function updateStudentStatus(req, res) {
   } catch (error) {
     console.error("Update student status error:", error);
     return res.status(500).json({ message: "Unable to update student status right now." });
+  }
+}
+
+export async function updateStudentVerification(req, res) {
+  try {
+    const { verificationStatus } = req.body;
+
+    if (!["approved", "rejected"].includes(verificationStatus)) {
+      return res.status(400).json({ message: "Please choose a valid verification action." });
+    }
+
+    if (verificationStatus === "rejected") {
+      const rejectedStudent = await Student.findByIdAndDelete(req.params.id);
+
+      if (!rejectedStudent) {
+        return res.status(404).json({ message: "Student not found." });
+      }
+
+      return res.status(200).json({ message: "Student registration rejected and deleted." });
+    }
+
+    const student = await Student.findById(req.params.id);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    student.verificationStatus = "approved";
+    await student.save();
+
+    return res.status(200).json({
+      message: "Student registration approved.",
+      user: sanitizeStudent(student),
+    });
+  } catch (error) {
+    console.error("Update student verification error:", error);
+    return res.status(500).json({ message: "Unable to update student verification right now." });
   }
 }

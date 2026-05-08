@@ -4,6 +4,24 @@ import { buildFileUrl } from "../config/uploads.js";
 import XLSX from "xlsx";
 
 const DRIVE_DEGREE_OPTIONS = ["All Degrees", "IMTech", "MTech(CS)", "MTech(AI)"];
+const COLLEGE_NAME = "University of Hyderabad";
+const STUDENT_FIELD_EXPORTERS = {
+  name: { label: "Name", getValue: (application) => application.name },
+  email: { label: "Email", getValue: (application) => application.email },
+  regno: { label: "RegistrationNumber", getValue: (application) => application.regno },
+  year: { label: "Year", getValue: (application) => application.year },
+  branch: { label: "Branch", getValue: (application) => application.branch },
+  degree: { label: "Degree", getValue: (application) => application.degree },
+  tenth: { label: "TenthPercentage", getValue: (application) => application.tenth },
+  twelfth: { label: "TwelfthPercentage", getValue: (application) => application.twelfth },
+  ug: { label: "UGCGPA", getValue: (application) => application.ug },
+  pg: { label: "PGCGPA", getValue: (application) => application.pg },
+  collegeName: {
+    label: "CollegeName",
+    getValue: (application) => application.collegeName || COLLEGE_NAME,
+  },
+  resumeUrl: { label: "ResumeUrl", getValue: (application) => application.resumeUrl },
+};
 
 function isValidDriveDegree(degree) {
   return DRIVE_DEGREE_OPTIONS.includes(degree);
@@ -15,6 +33,68 @@ function isStudentEligibleForDriveDegree(studentDegree, driveDegree) {
   }
 
   return studentDegree === driveDegree;
+}
+
+function normalizeCustomKey(label) {
+  return String(label || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function parseApplicationFields(rawFields) {
+  if (!rawFields) {
+    return [];
+  }
+
+  try {
+    const fields = JSON.parse(rawFields);
+
+    if (!Array.isArray(fields)) {
+      return [];
+    }
+
+    return fields
+      .map((field) => {
+        const source = field.source === "student" ? "student" : "custom";
+        const label = String(field.label || "").trim();
+        const key = source === "student" ? field.key : normalizeCustomKey(label || field.key);
+        const order = Number.parseInt(field.order, 10);
+
+        if (!key || !label) {
+          return null;
+        }
+
+        if (source === "student" && !STUDENT_FIELD_EXPORTERS[key]) {
+          return null;
+        }
+
+        return {
+          key,
+          label,
+          source,
+          required: field.required !== false,
+          order: Number.isFinite(order) && order > 0 ? order : 1,
+        };
+      })
+      .filter(Boolean)
+      .sort((firstField, secondField) => firstField.order - secondField.order);
+  } catch {
+    return [];
+  }
+}
+
+function buildCompanyFields(applicationFields, applicationDetails = {}) {
+  const companyFields = {};
+
+  applicationFields
+    .filter((field) => field.source === "custom")
+    .forEach((field) => {
+      companyFields[field.key] = String(applicationDetails[field.key] || "").trim();
+    });
+
+  return companyFields;
 }
 
 export async function getPlacementDrives(_req, res) {
@@ -29,7 +109,7 @@ export async function getPlacementDrives(_req, res) {
 
 export async function createPlacementDrive(req, res) {
   try {
-    const { company, minCgpa, deadline, createdBy, degree } = req.body;
+    const { company, minCgpa, deadline, createdBy, degree, applicationFields } = req.body;
 
     if (!company || !minCgpa || !deadline || !degree) {
       return res.status(400).json({ message: "Company, minimum CGPA, deadline, and degree are required." });
@@ -47,6 +127,7 @@ export async function createPlacementDrive(req, res) {
       jdFileName: req.file?.filename || "",
       jdOriginalName: req.file?.originalname || "",
       jdUrl: req.file ? buildFileUrl(req, "drives", req.file.filename) : "",
+      applicationFields: parseApplicationFields(applicationFields),
       createdBy,
     });
 
@@ -68,7 +149,7 @@ export async function updatePlacementDrive(req, res) {
       return res.status(404).json({ message: "Placement drive not found." });
     }
 
-    const { company, minCgpa, deadline, createdBy, degree } = req.body;
+    const { company, minCgpa, deadline, createdBy, degree, applicationFields } = req.body;
 
     if (degree && !isValidDriveDegree(degree)) {
       return res.status(400).json({ message: "Please choose a valid degree option for the drive." });
@@ -79,6 +160,10 @@ export async function updatePlacementDrive(req, res) {
     drive.deadline = deadline || drive.deadline;
     drive.createdBy = createdBy || drive.createdBy;
     drive.degree = degree || drive.degree;
+
+    if (applicationFields) {
+      drive.applicationFields = parseApplicationFields(applicationFields);
+    }
 
     if (req.file) {
       drive.jdFileName = req.file.filename;
@@ -114,13 +199,13 @@ export async function deletePlacementDrive(req, res) {
 }
 
 function getStudentCgpa(student) {
-  const cgpaValue = parseFloat(student.ug || student.pg || "0");
+  const cgpaValue = parseFloat(student.degree === "IMTech" ? student.ug || "0" : student.pg || "0");
   return Number.isFinite(cgpaValue) ? cgpaValue : 0;
 }
 
 export async function applyForDrive(req, res) {
   try {
-    const { studentId } = req.body;
+    const { studentId, applicationDetails = {} } = req.body;
 
     if (!studentId) {
       return res.status(400).json({ message: "Student id is required." });
@@ -147,6 +232,10 @@ export async function applyForDrive(req, res) {
       return res.status(403).json({ message: "Blacklisted students cannot apply for drives." });
     }
 
+    if ((student.academicVerificationStatus || "approved") !== "approved") {
+      return res.status(403).json({ message: "Your updated CGPA is pending faculty verification." });
+    }
+
     const minCgpa = parseFloat(drive.minCgpa || "0");
     const studentCgpa = getStudentCgpa(student);
 
@@ -166,6 +255,18 @@ export async function applyForDrive(req, res) {
       return res.status(409).json({ message: "You have already applied for this drive." });
     }
 
+    const missingRequiredFields = (drive.applicationFields || [])
+      .filter((field) => field.source === "custom" && field.required)
+      .filter((field) => !String(applicationDetails[field.key] || "").trim());
+
+    if (missingRequiredFields.length > 0) {
+      return res.status(400).json({
+        message: `Please fill these company fields: ${missingRequiredFields
+          .map((field) => field.label)
+          .join(", ")}.`,
+      });
+    }
+
     drive.applications.push({
       studentId: student._id,
       name: student.name,
@@ -178,7 +279,9 @@ export async function applyForDrive(req, res) {
       twelfth: student.twelfth,
       ug: student.ug,
       pg: student.pg,
+      collegeName: COLLEGE_NAME,
       resumeUrl: student.resumeUrl,
+      companyFields: buildCompanyFields(drive.applicationFields || [], applicationDetails),
     });
 
     await drive.save();
@@ -201,20 +304,39 @@ export async function exportDriveApplications(req, res) {
       return res.status(404).json({ message: "Placement drive not found." });
     }
 
-    const rows = drive.applications.map((application) => ({
-      Name: application.name,
-      Email: application.email,
-      RegistrationNumber: application.regno,
-      Year: application.year,
-      Branch: application.branch,
-      Degree: application.degree,
-      TenthPercentage: application.tenth,
-      TwelfthPercentage: application.twelfth,
-      UGCGPA: application.ug,
-      PGCGPA: application.pg,
-      ResumeUrl: application.resumeUrl,
-      AppliedAt: application.appliedAt,
-    }));
+    const configuredFields = drive.applicationFields?.length
+      ? [...drive.applicationFields].sort((firstField, secondField) => firstField.order - secondField.order)
+      : [
+          { key: "name", label: "Name", source: "student", order: 1 },
+          { key: "email", label: "Email", source: "student", order: 2 },
+          { key: "regno", label: "Registration Number", source: "student", order: 3 },
+          { key: "year", label: "Year", source: "student", order: 4 },
+          { key: "branch", label: "Branch", source: "student", order: 5 },
+          { key: "degree", label: "Degree", source: "student", order: 6 },
+          { key: "tenth", label: "10th Percentage", source: "student", order: 7 },
+          { key: "twelfth", label: "12th Percentage", source: "student", order: 8 },
+          { key: "ug", label: "UG CGPA", source: "student", order: 9 },
+          { key: "pg", label: "PG CGPA", source: "student", order: 10 },
+          { key: "collegeName", label: "College Name", source: "student", order: 11 },
+          { key: "resumeUrl", label: "Resume URL", source: "student", order: 12 },
+        ];
+
+    const rows = drive.applications.map((application) => {
+      const row = {};
+
+      configuredFields.forEach((field) => {
+        if (field.source === "student") {
+          const exporter = STUDENT_FIELD_EXPORTERS[field.key];
+          row[field.label || exporter?.label || field.key] = exporter?.getValue(application) || "";
+          return;
+        }
+
+        row[field.label] = application.companyFields?.[field.key] || "";
+      });
+
+      row.AppliedAt = application.appliedAt;
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();

@@ -3,7 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../config/api";
 import { clearAuthUser, getAuthUser, saveAuthUser } from "../config/auth";
 
-const STUDENT_DEGREE_OPTIONS = ["IMTech", "MTech(CS)", "MTech(AI)"];
+const COLLEGE_NAME = "University of Hyderabad";
+const STUDENT_APPLICATION_FIELD_VALUES = {
+  name: (student) => student?.name || "",
+  email: (student) => student?.email || "",
+  regno: (student) => student?.regno || "",
+  year: (student) => student?.year || "",
+  branch: (student) => student?.branch || "",
+  degree: (student) => student?.degree || "",
+  tenth: (student) => student?.tenth || "",
+  twelfth: (student) => student?.twelfth || "",
+  ug: (student) => student?.ug || "",
+  pg: (student) => student?.pg || "",
+  collegeName: () => COLLEGE_NAME,
+  resumeUrl: (student) => student?.resumeUrl || "",
+};
 
 function isDriveVisibleForDegree(driveDegree, studentDegree) {
   if (!driveDegree || driveDegree === "All Degrees") {
@@ -13,9 +27,20 @@ function isDriveVisibleForDegree(driveDegree, studentDegree) {
   return driveDegree === studentDegree;
 }
 
+function getCompanyApplicationFields(drive, student) {
+  return [...(drive.applicationFields || [])]
+    .sort((firstField, secondField) => (firstField.order || 1) - (secondField.order || 1))
+    .map((field) => ({
+      ...field,
+      value: field.source === "student" ? STUDENT_APPLICATION_FIELD_VALUES[field.key]?.(student) || "" : "",
+      isAutoFilled: field.source === "student",
+    }));
+}
+
 function StudentDashboardDb() {
   const navigate = useNavigate();
   const authUser = getAuthUser();
+  const authUserId = authUser?.id;
   const [active, setActive] = useState("profile");
   const [student, setStudent] = useState(null);
   const [drives, setDrives] = useState([]);
@@ -24,28 +49,21 @@ function StudentDashboardDb() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [applicationForms, setApplicationForms] = useState({});
+  const [cgpaForm, setCgpaForm] = useState("");
   const [editForm, setEditForm] = useState({
-    name: "",
-    email: "",
-    regno: "",
-    year: "",
-    branch: "",
-    degree: "",
-    tenth: "",
-    twelfth: "",
-    ug: "",
-    pg: "",
-    password: "",
-    resume: null,
+    resumeUrl: "",
   });
 
   const getStudentCgpa = () => {
-    const value = parseFloat(student?.ug || student?.pg || "0");
+    const value = parseFloat(student?.degree === "IMTech" ? student?.ug || "0" : student?.pg || "0");
     return Number.isFinite(value) ? value : 0;
   };
 
+  const getEditableCgpaLabel = () => (student?.degree === "IMTech" ? "UG CGPA" : "PG CGPA");
+
   useEffect(() => {
-    if (!authUser?.id) {
+    if (!authUserId) {
       setError("Student session not found.");
       setIsLoading(false);
       return;
@@ -53,33 +71,30 @@ function StudentDashboardDb() {
 
     let isMounted = true;
 
-    async function loadStudent() {
+    async function loadStudent(showLoading = true) {
       try {
+        if (showLoading) {
         setIsLoading(true);
+        }
         const [studentData, driveData, materialData] = await Promise.all([
-          apiRequest(`/students/${authUser.id}`),
+          apiRequest(`/students/${authUserId}`),
           apiRequest("/drives"),
           apiRequest("/materials"),
         ]);
 
         if (isMounted) {
           setStudent(studentData.user);
+          const currentAuthUser = getAuthUser();
+          saveAuthUser({
+            ...currentAuthUser,
+            ...studentData.user,
+          });
           setDrives(driveData.drives);
           setMaterials(materialData.materials);
           setEditForm({
-            name: studentData.user.name || "",
-            email: studentData.user.email || "",
-            regno: studentData.user.regno || "",
-            year: studentData.user.year || "",
-            branch: studentData.user.branch || "",
-            degree: studentData.user.degree || "",
-            tenth: studentData.user.tenth || "",
-            twelfth: studentData.user.twelfth || "",
-            ug: studentData.user.ug || "",
-            pg: studentData.user.pg || "",
-            password: "",
-            resume: null,
+            resumeUrl: studentData.user.resumeUrl || "",
           });
+          setCgpaForm(studentData.user.degree === "IMTech" ? studentData.user.ug || "" : studentData.user.pg || "");
           setError("");
         }
       } catch (loadError) {
@@ -94,11 +109,15 @@ function StudentDashboardDb() {
     }
 
     loadStudent();
+    const refreshTimer = window.setInterval(() => {
+      loadStudent(false);
+    }, 8000);
 
     return () => {
       isMounted = false;
+      window.clearInterval(refreshTimer);
     };
-  }, [authUser?.id]);
+  }, [authUserId]);
 
   const handleLogout = () => {
     clearAuthUser();
@@ -106,10 +125,10 @@ function StudentDashboardDb() {
   };
 
   const handleEditChange = (event) => {
-    const { name, value, files } = event.target;
+    const { name, value } = event.target;
     setEditForm((currentForm) => ({
       ...currentForm,
-      [name]: files ? files[0] : value,
+      [name]: value,
     }));
   };
 
@@ -119,29 +138,16 @@ function StudentDashboardDb() {
     setMessage("");
 
     try {
-      const payload = new FormData();
-      payload.append("name", editForm.name);
-      payload.append("email", editForm.email);
-      payload.append("regno", editForm.regno);
-      payload.append("year", editForm.year);
-      payload.append("branch", editForm.branch);
-      payload.append("degree", editForm.degree);
-      payload.append("tenth", editForm.tenth);
-      payload.append("twelfth", editForm.twelfth);
-      payload.append("ug", editForm.ug);
-      payload.append("pg", editForm.pg);
-
-      if (editForm.password) {
-        payload.append("password", editForm.password);
-      }
-
-      if (editForm.resume) {
-        payload.append("resume", editForm.resume);
+      if (!editForm.resumeUrl.trim()) {
+        setError("Please enter a public resume URL.");
+        return;
       }
 
       const data = await apiRequest(`/students/${authUser.id}`, {
         method: "PATCH",
-        body: payload,
+        body: JSON.stringify({
+          resumeUrl: editForm.resumeUrl,
+        }),
       });
 
       setStudent(data.user);
@@ -151,30 +157,82 @@ function StudentDashboardDb() {
       });
       setEditForm((currentForm) => ({
         ...currentForm,
-        password: "",
-        resume: null,
+        resumeUrl: data.user.resumeUrl || "",
       }));
       setIsEditing(false);
-      setMessage("Profile updated successfully.");
+      setMessage("Resume updated successfully.");
     } catch (updateError) {
       setError(updateError.message);
     }
   };
 
-  const handleApply = async (driveId) => {
+  const handleCgpaUpdate = async (event) => {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiRequest(`/students/${authUser.id}/cgpa`, {
+        method: "PATCH",
+        body: JSON.stringify({ cgpa: cgpaForm }),
+      });
+
+      setStudent(data.user);
+      saveAuthUser({
+        ...authUser,
+        ...data.user,
+      });
+      setMessage(data.message);
+    } catch (updateError) {
+      setError(updateError.message);
+    }
+  };
+
+  const handleApplicationFieldChange = (driveId, fieldName, value) => {
+    setApplicationForms((currentForms) => ({
+      ...currentForms,
+      [driveId]: {
+        ...(currentForms[driveId] || {}),
+        [fieldName]: value,
+      },
+    }));
+  };
+
+  const handleApply = async (drive) => {
     try {
       setError("");
       setMessage("");
 
-      const data = await apiRequest(`/drives/${driveId}/apply`, {
+      const applicationDetails = {};
+      const missingFields = [];
+      getCompanyApplicationFields(drive, student).forEach((field) => {
+        if (field.isAutoFilled) {
+          return;
+        }
+
+        const fieldValue = applicationForms[drive._id]?.[field.key] || "";
+        applicationDetails[field.key] = fieldValue;
+
+        if (field.required !== false && !fieldValue.trim()) {
+          missingFields.push(field.label);
+        }
+      });
+
+      if (missingFields.length > 0) {
+        setError(`Please fill these company fields: ${missingFields.join(", ")}.`);
+        return;
+      }
+
+      const data = await apiRequest(`/drives/${drive._id}/apply`, {
         method: "POST",
         body: JSON.stringify({
           studentId: authUser.id,
+          applicationDetails,
         }),
       });
 
       setDrives((currentDrives) =>
-        currentDrives.map((drive) => (drive._id === driveId ? data.drive : drive))
+        currentDrives.map((currentDrive) => (currentDrive._id === drive._id ? data.drive : currentDrive))
       );
       setMessage("Applied successfully.");
     } catch (applyError) {
@@ -243,11 +301,27 @@ function StudentDashboardDb() {
                 <p><b>10th Percentage:</b> {student.tenth || "-"}</p>
                 <p><b>12th Percentage:</b> {student.twelfth || "-"}</p>
                 <p><b>PG CGPA:</b> {student.pg || "-"}</p>
+                <p><b>CGPA Verification:</b> {student.academicVerificationStatus || "approved"}</p>
+                {student.cgpaEditAccess ? (
+                  <form className="form cgpa-edit-form" onSubmit={handleCgpaUpdate}>
+                    <label>{getEditableCgpaLabel()}</label>
+                    <input
+                      min="0"
+                      max="10"
+                      step="0.01"
+                      type="number"
+                      value={cgpaForm}
+                      onChange={(event) => setCgpaForm(event.target.value)}
+                      required
+                    />
+                    <button type="submit">Submit CGPA For Verification</button>
+                  </form>
+                ) : null}
                 <p>
                   <b>Resume:</b>{" "}
                   {student.resumeUrl ? (
                     <a href={student.resumeUrl} target="_blank" rel="noreferrer">
-                      {student.resumeOriginalName || student.resumeFileName}
+                      {student.resumeUrl}
                     </a>
                   ) : (
                     "Not uploaded"
@@ -255,31 +329,20 @@ function StudentDashboardDb() {
                 </p>
                 <p><b>Placed:</b> {student.placed ? "Yes" : "No"}</p>
                 <p><b>Blacklisted:</b> {student.blacklist ? "Yes" : "No"}</p>
-                <button onClick={() => setIsEditing(true)}>Edit Details</button>
+                <button onClick={() => setIsEditing(true)}>Update Resume</button>
               </>
             ) : (
               <form className="form" onSubmit={handleProfileUpdate}>
-                <input name="name" placeholder="Full Name" value={editForm.name} onChange={handleEditChange} required />
-                <input name="email" type="email" placeholder="College Email" value={editForm.email} onChange={handleEditChange} required />
-                <input name="regno" placeholder="Registration Number" value={editForm.regno} onChange={handleEditChange} required />
-                <input name="year" placeholder="Passout Year" value={editForm.year} onChange={handleEditChange} required />
-                <input name="branch" placeholder="Branch" value={editForm.branch} onChange={handleEditChange} required />
-                <select name="degree" value={editForm.degree} onChange={handleEditChange} required>
-                  <option value="">Select Degree</option>
-                  {STUDENT_DEGREE_OPTIONS.map((degreeOption) => (
-                    <option key={degreeOption} value={degreeOption}>
-                      {degreeOption}
-                    </option>
-                  ))}
-                </select>
-                <input name="tenth" placeholder="10th Percentage" value={editForm.tenth} onChange={handleEditChange} />
-                <input name="twelfth" placeholder="12th Percentage" value={editForm.twelfth} onChange={handleEditChange} />
-                <input name="ug" placeholder="UG CGPA" value={editForm.ug} onChange={handleEditChange} />
-                <input name="pg" placeholder="PG CGPA" value={editForm.pg} onChange={handleEditChange} />
-                <input name="password" type="password" placeholder="New Password (optional)" value={editForm.password} onChange={handleEditChange} />
-                <input name="resume" type="file" onChange={handleEditChange} />
+                <input
+                  name="resumeUrl"
+                  type="url"
+                  placeholder="https://drive.google.com/..."
+                  value={editForm.resumeUrl}
+                  onChange={handleEditChange}
+                  required
+                />
                 <div className="action-row">
-                  <button type="submit">Save Changes</button>
+                  <button type="submit">Save Resume</button>
                   <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
                 </div>
               </form>
@@ -314,6 +377,7 @@ function StudentDashboardDb() {
                     const minCgpa = parseFloat(drive.minCgpa || "0");
                     const studentCgpa = getStudentCgpa();
                     const meetsCgpa = !Number.isFinite(minCgpa) || studentCgpa >= minCgpa;
+                    const academicsVerified = (student?.academicVerificationStatus || "approved") === "approved";
                     const alreadyApplied = (drive.applications || []).some(
                       (application) => application.studentId === authUser.id || application.studentId === student?.id
                     );
@@ -324,6 +388,8 @@ function StudentDashboardDb() {
                       statusText = "Application frozen: you are marked as placed.";
                     } else if (student?.blacklist) {
                       statusText = "Application frozen: you are blacklisted.";
+                    } else if (!academicsVerified) {
+                      statusText = "CGPA pending faculty verification.";
                     } else if (meetsCgpa) {
                       statusText = "Eligible";
                     } else {
@@ -331,15 +397,42 @@ function StudentDashboardDb() {
                     }
 
                     return (
-                      <div className="action-row">
-                        <span>{statusText}</span>
-                        <button
-                          type="button"
-                          disabled={!meetsCgpa || alreadyApplied || applicationFrozen}
-                          onClick={() => handleApply(drive._id)}
-                        >
-                          {alreadyApplied ? "Applied" : "Apply"}
-                        </button>
+                      <div>
+                        <div className="application-summary">
+                          {getCompanyApplicationFields(drive, student)
+                            .filter((field) => field.source === "student")
+                            .map((field) => (
+                              <p key={field.key}>
+                                <b>{field.label}:</b> {field.value || "-"}
+                              </p>
+                            ))}
+                        </div>
+
+                        {getCompanyApplicationFields(drive, student)
+                          .filter((field) => field.source === "custom")
+                          .map((field) => (
+                          <label key={field.key} className="application-field">
+                            <span>{field.label}</span>
+                            <input
+                              value={applicationForms[drive._id]?.[field.key] || ""}
+                              onChange={(event) =>
+                                handleApplicationFieldChange(drive._id, field.key, event.target.value)
+                              }
+                              placeholder={`Enter ${field.label}`}
+                            />
+                          </label>
+                        ))}
+
+                        <div className="action-row">
+                          <span>{statusText}</span>
+                          <button
+                            type="button"
+                            disabled={!meetsCgpa || !academicsVerified || alreadyApplied || applicationFrozen}
+                            onClick={() => handleApply(drive)}
+                          >
+                            {alreadyApplied ? "Applied" : "Register"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}

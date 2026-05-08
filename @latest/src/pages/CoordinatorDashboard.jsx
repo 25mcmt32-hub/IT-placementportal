@@ -1,9 +1,43 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiRequest } from "../config/api";
+import { apiBaseUrl, apiRequest } from "../config/api";
 import { clearAuthUser, getAuthUser } from "../config/auth";
 
 const DRIVE_DEGREE_OPTIONS = ["All Degrees", "IMTech", "MTech(CS)", "MTech(AI)"];
+const STUDENT_APPLICATION_FIELDS = [
+  { key: "name", label: "Name", order: 1 },
+  { key: "email", label: "Email", order: 2 },
+  { key: "regno", label: "Registration Number", order: 3 },
+  { key: "year", label: "Passout Year", order: 4 },
+  { key: "branch", label: "Branch", order: 5 },
+  { key: "degree", label: "Degree", order: 6 },
+  { key: "tenth", label: "10th Percentage", order: 7 },
+  { key: "twelfth", label: "12th Percentage", order: 8 },
+  { key: "ug", label: "UG CGPA", order: 9 },
+  { key: "pg", label: "PG CGPA", order: 10 },
+  { key: "collegeName", label: "College Name", order: 11 },
+  { key: "resumeUrl", label: "Resume URL", order: 12 },
+];
+const DEFAULT_APPLICATION_FIELDS = STUDENT_APPLICATION_FIELDS.map((field) => ({
+  ...field,
+  source: "student",
+  required: true,
+}));
+
+function normalizeCustomFieldKey(label) {
+  return label
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function currentMaxOrder(fields) {
+  return fields.reduce((maxOrder, field) => {
+    const fieldOrder = Number.parseInt(field.order, 10);
+    return Number.isFinite(fieldOrder) && fieldOrder > maxOrder ? fieldOrder : maxOrder;
+  }, 0);
+}
 
 function CoordinatorDashboard() {
   const navigate = useNavigate();
@@ -16,8 +50,11 @@ function CoordinatorDashboard() {
     minCgpa: "",
     deadline: "",
     degree: "All Degrees",
-    jd: null
+    jd: null,
+    applicationFields: DEFAULT_APPLICATION_FIELDS,
   });
+  const [customFieldLabel, setCustomFieldLabel] = useState("");
+  const [customFieldOrder, setCustomFieldOrder] = useState("");
 
   const [material, setMaterial] = useState({
     title: "",
@@ -29,20 +66,32 @@ function CoordinatorDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
       try {
         const [driveData, materialData] = await Promise.all([
           apiRequest("/drives"),
           apiRequest("/materials"),
         ]);
-        setDrives(driveData.drives);
-        setMaterials(materialData.materials);
+        if (isMounted) {
+          setDrives(driveData.drives);
+          setMaterials(materialData.materials);
+        }
       } catch (loadError) {
-        setError(loadError.message);
+        if (isMounted) {
+          setError(loadError.message);
+        }
       }
     };
 
     loadData();
+    const refreshTimer = window.setInterval(loadData, 8000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshTimer);
+    };
   }, []);
 
   const handleDriveChange = (e) => {
@@ -76,6 +125,7 @@ function CoordinatorDashboard() {
       if (drive.jd) {
         payload.append("jd", drive.jd);
       }
+      payload.append("applicationFields", JSON.stringify(drive.applicationFields));
 
       const data = await apiRequest(editingDriveId ? `/drives/${editingDriveId}` : "/drives", {
         method: editingDriveId ? "PATCH" : "POST",
@@ -97,6 +147,7 @@ function CoordinatorDashboard() {
         deadline: "",
         degree: "All Degrees",
         jd: null,
+        applicationFields: DEFAULT_APPLICATION_FIELDS,
       });
       setEditingDriveId("");
       setMessage(editingDriveId ? "Drive updated successfully." : "Drive uploaded successfully.");
@@ -147,6 +198,9 @@ function CoordinatorDashboard() {
       deadline: savedDrive.deadline,
       degree: savedDrive.degree || "All Degrees",
       jd: null,
+      applicationFields: savedDrive.applicationFields?.length
+        ? savedDrive.applicationFields
+        : DEFAULT_APPLICATION_FIELDS,
     });
     setActive("drive");
     setMessage("");
@@ -167,6 +221,7 @@ function CoordinatorDashboard() {
           deadline: "",
           degree: "All Degrees",
           jd: null,
+          applicationFields: DEFAULT_APPLICATION_FIELDS,
         });
       }
       setMessage("Drive deleted successfully.");
@@ -176,7 +231,98 @@ function CoordinatorDashboard() {
   };
 
   const handleExportApplicants = (driveId) => {
-    window.open(`http://localhost:5000/api/drives/${driveId}/applications/export`, "_blank");
+    window.open(`${apiBaseUrl}/drives/${driveId}/applications/export`, "_blank");
+  };
+
+  const toggleStudentApplicationField = (field) => {
+    setDrive((currentDrive) => {
+      const exists = currentDrive.applicationFields.some(
+        (applicationField) => applicationField.source === "student" && applicationField.key === field.key
+      );
+
+      return {
+        ...currentDrive,
+        applicationFields: exists
+          ? currentDrive.applicationFields.filter(
+              (applicationField) =>
+                !(applicationField.source === "student" && applicationField.key === field.key)
+            )
+          : [
+              ...currentDrive.applicationFields,
+              {
+                ...field,
+                source: "student",
+                required: true,
+                order: field.order,
+              },
+            ],
+      };
+    });
+  };
+
+  const updateApplicationFieldOrder = (fieldKey, source, order) => {
+    const nextOrder = Number.parseInt(order, 10);
+
+    setDrive((currentDrive) => ({
+      ...currentDrive,
+      applicationFields: currentDrive.applicationFields.map((field) =>
+        field.key === fieldKey && field.source === source
+          ? {
+              ...field,
+              order: Number.isFinite(nextOrder) && nextOrder > 0 ? nextOrder : "",
+            }
+          : field
+      ),
+    }));
+  };
+
+  const addCustomApplicationField = () => {
+    const label = customFieldLabel.trim();
+    const key = normalizeCustomFieldKey(label);
+
+    if (!key) {
+      return;
+    }
+    const parsedOrder = Number.parseInt(customFieldOrder, 10);
+    const nextOrder =
+      Number.isFinite(parsedOrder) && parsedOrder > 0
+        ? parsedOrder
+        : currentMaxOrder(drive.applicationFields) + 1;
+
+    setDrive((currentDrive) => {
+      const exists = currentDrive.applicationFields.some(
+        (applicationField) => applicationField.key === key
+      );
+
+      if (exists) {
+        return currentDrive;
+      }
+
+      return {
+        ...currentDrive,
+        applicationFields: [
+          ...currentDrive.applicationFields,
+          {
+            key,
+            label,
+            source: "custom",
+            required: true,
+            order: nextOrder,
+          },
+        ],
+      };
+    });
+    setCustomFieldLabel("");
+    setCustomFieldOrder("");
+  };
+
+  const removeCustomApplicationField = (fieldKey) => {
+    setDrive((currentDrive) => ({
+      ...currentDrive,
+      applicationFields: currentDrive.applicationFields.filter(
+        (applicationField) => !(applicationField.source === "custom" && applicationField.key === fieldKey)
+      ),
+    }));
   };
 
   const handleDeleteMaterial = async (materialId) => {
@@ -249,6 +395,90 @@ function CoordinatorDashboard() {
               <label>Upload JD (PDF)</label>
               <input type="file" name="jd" onChange={handleDriveChange} required={!editingDriveId} />
 
+              <div className="field-builder">
+                <h3>Excel Fields</h3>
+                <div className="field-option-grid">
+                  {STUDENT_APPLICATION_FIELDS.map((field) => {
+                    const checked = drive.applicationFields.some(
+                      (applicationField) =>
+                        applicationField.source === "student" && applicationField.key === field.key
+                    );
+
+                    return (
+                      <label key={field.key} className="field-option">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleStudentApplicationField(field)}
+                        />
+                        <span>{field.label}</span>
+                        {checked ? (
+                          <input
+                            aria-label={`${field.label} column number`}
+                            className="field-order-input"
+                            min="1"
+                            type="number"
+                            value={
+                              drive.applicationFields.find(
+                                (applicationField) =>
+                                  applicationField.source === "student" && applicationField.key === field.key
+                              )?.order || ""
+                            }
+                            onChange={(event) =>
+                              updateApplicationFieldOrder(field.key, "student", event.target.value)
+                            }
+                          />
+                        ) : null}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="custom-field-row">
+                  <input
+                    value={customFieldLabel}
+                    onChange={(event) => setCustomFieldLabel(event.target.value)}
+                    placeholder="Add extra company column"
+                  />
+                  <input
+                    min="1"
+                    type="number"
+                    value={customFieldOrder}
+                    onChange={(event) => setCustomFieldOrder(event.target.value)}
+                    placeholder="Column no."
+                  />
+                  <button type="button" onClick={addCustomApplicationField}>
+                    Add Field
+                  </button>
+                </div>
+
+                {drive.applicationFields.filter((field) => field.source === "custom").length ? (
+                  <div className="selected-field-list">
+                    {drive.applicationFields
+                      .filter((field) => field.source === "custom")
+                      .sort((firstField, secondField) => (firstField.order || 1) - (secondField.order || 1))
+                      .map((field) => (
+                        <span key={field.key}>
+                          #{field.order || "-"} {field.label}
+                          <input
+                            aria-label={`${field.label} column number`}
+                            className="field-order-input"
+                            min="1"
+                            type="number"
+                            value={field.order || ""}
+                            onChange={(event) =>
+                              updateApplicationFieldOrder(field.key, "custom", event.target.value)
+                            }
+                          />
+                          <button type="button" onClick={() => removeCustomApplicationField(field.key)}>
+                            Remove
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+
               <button type="submit">{editingDriveId ? "Save Drive" : "Upload"}</button>
               {editingDriveId ? (
                 <button
@@ -261,6 +491,7 @@ function CoordinatorDashboard() {
                       deadline: "",
                       degree: "All Degrees",
                       jd: null,
+                      applicationFields: DEFAULT_APPLICATION_FIELDS,
                     });
                   }}
                 >
@@ -289,6 +520,18 @@ function CoordinatorDashboard() {
                       "Not uploaded"
                     )}
                   </p>
+                  <p>Excel Fields: {savedDrive.applicationFields?.length || 0}</p>
+                  {savedDrive.applicationFields?.length ? (
+                    <div className="selected-field-list">
+                      {[...savedDrive.applicationFields]
+                        .sort((firstField, secondField) => (firstField.order || 1) - (secondField.order || 1))
+                        .map((field) => (
+                          <span key={`${field.source}-${field.key}`}>
+                            #{field.order || "-"} {field.label}
+                          </span>
+                        ))}
+                    </div>
+                  ) : null}
                   <p>Applicants: {savedDrive.applications?.length || 0}</p>
                   {savedDrive.applications?.length ? (
                     <div className="applicant-list">

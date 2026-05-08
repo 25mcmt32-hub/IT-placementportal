@@ -18,6 +18,9 @@ function sanitizeStudent(student) {
     ug: student.ug,
     pg: student.pg,
     resumeFileName: student.resumeFileName,
+    verificationStatus: student.verificationStatus || "pending",
+    academicVerificationStatus: student.academicVerificationStatus || "approved",
+    cgpaEditAccess: Boolean(student.cgpaEditAccess),
     placed: student.placed,
     blacklist: student.blacklist,
     createdAt: student.createdAt,
@@ -64,13 +67,17 @@ export async function studentLogin(req, res) {
     const student = await Student.findOne({ email: email.toLowerCase() });
 
     if (!student) {
-      return res.status(401).json({ message: "Invalid login credentials." });
+      return res.status(404).json({ message: "Please register first." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, student.password);
 
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid login credentials." });
+    }
+
+    if ((student.verificationStatus || "pending") !== "approved") {
+      return res.status(403).json({ message: "Your registration is on process by faculty." });
     }
 
     return res.status(200).json({
